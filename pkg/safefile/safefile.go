@@ -100,7 +100,7 @@ func SafeWriteFile(filePath string, data []byte, perm os.FileMode) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(absPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -174,7 +174,7 @@ func SafeCreate(filePath string) (*os.File, error) {
 
 	// Ensure directory exists
 	dir := filepath.Dir(absPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
