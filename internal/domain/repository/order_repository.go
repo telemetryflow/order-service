@@ -30,4 +30,10 @@ type OrderRepository interface {
 
 	// FindByStatus finds orders by Status
 	FindByStatus(ctx context.Context, status string) ([]entity.Order, error)
+
+	// FindByCustomerID finds orders by customer ID
+	FindByCustomerID(ctx context.Context, customerID uuid.UUID) ([]entity.Order, error)
+
+	// FindWithItems finds an order with its items
+	FindWithItems(ctx context.Context, id uuid.UUID) (*entity.Order, error)
 }

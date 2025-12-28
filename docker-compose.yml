@@ -128,22 +128,30 @@ services:
   otel-collector:
     profiles: ["monitoring", "all"]
     platform: linux/amd64
-    # OTEL Collector Community Contributor
-    # image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-latest}
     # =============================================================================
-    # TelemetryFlow Collector OCB (TFO-Collector-OCB)
+    # OTEL Collector Community Contributor (Standard OTEL format)
+    # image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
+    # command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    # =============================================================================
+    # TelemetryFlow Collector OCB (TFO-Collector-OCB) - Standard OTEL format
     # image: telemetryflow/telemetryflow-collector-ocb:${OTEL_VERSION:-latest}
-    # TelemetryFlow Collector (TFO-Collector)
+    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
+    # =============================================================================
+    # TelemetryFlow Collector (TFO-Collector) - Custom TFO format (OTLP not implemented yet)
     image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-latest}
+    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
     # =============================================================================
     container_name: ${CONTAINER_OTEL:-order_service_otel}
     restart: unless-stopped
-    command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
-      # OTEL Collector Community Contributor
-      # - ./configs/otel/ocb-collector.yaml:/etc/otel-collector-config.yaml:ro
-      # TelemetryFlow Collector (TFO-Collector)
-      - ./configs/otel/ocb-collector.yaml:/etc/otel-collector-config.yaml:ro
+      # OTEL Collector Community Contributor config
+      # - ./configs/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      # =============================================================================
+      # TelemetryFlow Collector OCB config (Standard OTEL format)
+      # - ./configs/otel/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
+      # =============================================================================
+      # TelemetryFlow Collector config (Custom TFO format)
+      - ./configs/otel/tfo-collector.yaml:/etc/tfo-collector/tfo-collector.yaml:ro
     ports:
       - "${PORT_OTEL_GRPC:-4317}:4317"     # OTLP gRPC
       - "${PORT_OTEL_HTTP:-4318}:4318"     # OTLP HTTP

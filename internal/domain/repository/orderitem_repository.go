@@ -27,4 +27,16 @@ type OrderitemRepository interface {
 
 	// HardDelete permanently deletes a orderitem
 	HardDelete(ctx context.Context, id uuid.UUID) error
+
+	// FindByOrderID finds all items for an order
+	FindByOrderID(ctx context.Context, orderID uuid.UUID) ([]entity.Orderitem, error)
+
+	// FindByProductID finds all items for a product
+	FindByProductID(ctx context.Context, productID uuid.UUID) ([]entity.Orderitem, error)
+
+	// CreateBatch creates multiple orderitems in a single transaction
+	CreateBatch(ctx context.Context, items []entity.Orderitem) error
+
+	// DeleteByOrderID deletes all items for an order
+	DeleteByOrderID(ctx context.Context, orderID uuid.UUID) error
 }

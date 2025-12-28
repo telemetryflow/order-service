@@ -38,6 +38,7 @@ type DatabaseConfig struct {
 	MaxOpenConns    int           `mapstructure:"max_open_conns"`
 	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	Debug           bool          `mapstructure:"debug"`
 }
 
 // JWTConfig holds JWT authentication configuration
@@ -94,6 +95,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("database.max_open_conns", 25)
 	viper.SetDefault("database.max_idle_conns", 5)
 	viper.SetDefault("database.conn_max_lifetime", "5m")
+	viper.SetDefault("database.debug", false)
 	viper.SetDefault("jwt.expiration", "24h")
 	viper.SetDefault("jwt.refresh_expiration", "168h")
 	viper.SetDefault("ratelimit.requests", 100)
@@ -118,6 +120,7 @@ func Load() (*Config, error) {
 	_ = viper.BindEnv("database.user", "DB_USER")
 	_ = viper.BindEnv("database.password", "DB_PASSWORD")
 	_ = viper.BindEnv("database.ssl_mode", "DB_SSL_MODE")
+	_ = viper.BindEnv("database.debug", "DB_DEBUG")
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET")
 	_ = viper.BindEnv("jwt.expiration", "JWT_EXPIRATION")
 	_ = viper.BindEnv("telemetry.api_key_id", "TELEMETRYFLOW_API_KEY_ID")

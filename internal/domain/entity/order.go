@@ -2,37 +2,38 @@
 package entity
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
 // Order represents the order domain entity
 type Order struct {
 	Base
-	CustomerId uuid.UUID `json:"customerId" db:"customer_id"`
-	Total      float64   `json:"total" db:"total"`
-	Status     string    `json:"status" db:"status"`
-	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
+	CustomerID uuid.UUID   `json:"customer_id" gorm:"type:uuid;not null;index"`
+	Total      float64     `json:"total" gorm:"type:decimal(15,2);not null;default:0"`
+	Status     string      `json:"status" gorm:"type:varchar(50);not null;default:'pending';index"`
+	Items      []Orderitem `json:"items,omitempty" gorm:"foreignKey:OrderID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+}
+
+// TableName returns the table name for GORM
+func (Order) TableName() string {
+	return "orders"
 }
 
 // NewOrder creates a new Order entity
-func NewOrder(customerId uuid.UUID, total float64, status string, createdAt time.Time) *Order {
+func NewOrder(customerID uuid.UUID, total float64, status string) *Order {
 	return &Order{
 		Base:       NewBase(),
-		CustomerId: customerId,
+		CustomerID: customerID,
 		Total:      total,
 		Status:     status,
-		CreatedAt:  createdAt,
 	}
 }
 
 // Update updates the order fields
-func (e *Order) Update(customerId uuid.UUID, total float64, status string, createdAt time.Time) {
-	e.CustomerId = customerId
+func (e *Order) Update(customerID uuid.UUID, total float64, status string) {
+	e.CustomerID = customerID
 	e.Total = total
 	e.Status = status
-	e.CreatedAt = createdAt
 	e.MarkUpdated()
 }
 

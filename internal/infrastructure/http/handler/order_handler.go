@@ -49,10 +49,9 @@ func (h *OrderHandler) Create(c echo.Context) error {
 	}
 
 	cmd := &command.CreateOrderCommand{
-		CustomerId: req.CustomerId,
+		CustomerID: req.CustomerID,
 		Total:      req.Total,
 		Status:     req.Status,
-		CreatedAt:  req.CreatedAt,
 	}
 
 	if err := h.commandHandler.HandleOrderCreate(c.Request().Context(), cmd); err != nil {
@@ -64,7 +63,7 @@ func (h *OrderHandler) Create(c echo.Context) error {
 
 // List handles GET /orders
 func (h *OrderHandler) List(c echo.Context) error {
-	var q query.GetAllordersQuery
+	var q query.GetAllOrdersQuery
 	if err := c.Bind(&q); err != nil {
 		return response.BadRequest(c, "Invalid query parameters")
 	}
@@ -112,10 +111,9 @@ func (h *OrderHandler) Update(c echo.Context) error {
 
 	cmd := &command.UpdateOrderCommand{
 		ID:         id,
-		CustomerId: req.CustomerId,
+		CustomerID: req.CustomerID,
 		Total:      req.Total,
 		Status:     req.Status,
-		CreatedAt:  req.CreatedAt,
 	}
 
 	if err := h.commandHandler.HandleOrderUpdate(c.Request().Context(), cmd); err != nil {

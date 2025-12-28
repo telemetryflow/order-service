@@ -35,7 +35,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer func() { _ = db.Close() }()
+	defer func() {
+		sqlDB, err := db.DB()
+		if err != nil {
+			log.Printf("Failed to get underlying sql.DB: %v", err)
+			return
+		}
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("Failed to close database connection: %v", err)
+		}
+	}()
 
 	// Create HTTP server
 	server := http.NewServer(cfg, db)

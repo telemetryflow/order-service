@@ -3,22 +3,22 @@ package http
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/telemetryflow/order-service/internal/infrastructure/config"
+	"gorm.io/gorm"
 )
 
 // Server represents the HTTP server
 type Server struct {
 	echo   *echo.Echo
 	config *config.Config
-	db     *sql.DB
+	db     *gorm.DB
 }
 
 // NewServer creates a new HTTP server
-func NewServer(cfg *config.Config, db *sql.DB) *Server {
+func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true

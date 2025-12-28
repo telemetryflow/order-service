@@ -11,18 +11,18 @@ import (
 // OrderResponse represents the order API response
 type OrderResponse struct {
 	ID         uuid.UUID `json:"id"`
-	CustomerId uuid.UUID `json:"customerId"`
+	CustomerID uuid.UUID `json:"customer_id"`
 	Total      float64   `json:"total"`
 	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // FromOrder converts entity to response DTO
 func FromOrder(e *entity.Order) OrderResponse {
 	return OrderResponse{
 		ID:         e.ID,
-		CustomerId: e.CustomerId,
+		CustomerID: e.CustomerID,
 		Total:      e.Total,
 		Status:     e.Status,
 		CreatedAt:  e.CreatedAt,
@@ -41,18 +41,16 @@ func FromOrders(entities []entity.Order) []OrderResponse {
 
 // CreateOrderRequest represents the create order request
 type CreateOrderRequest struct {
-	CustomerId uuid.UUID `json:"customerId" validate:"required"`
+	CustomerID uuid.UUID `json:"customer_id" validate:"required"`
 	Total      float64   `json:"total" validate:"required"`
 	Status     string    `json:"status" validate:"required"`
-	CreatedAt  time.Time `json:"createdAt" validate:"required"`
 }
 
 // UpdateOrderRequest represents the update order request
 type UpdateOrderRequest struct {
-	CustomerId uuid.UUID `json:"customerId" validate:"required"`
+	CustomerID uuid.UUID `json:"customer_id" validate:"required"`
 	Total      float64   `json:"total" validate:"required"`
 	Status     string    `json:"status" validate:"required"`
-	CreatedAt  time.Time `json:"createdAt" validate:"required"`
 }
 
 // OrderToResponse converts entity pointer to response DTO pointer

@@ -1,70 +1,18 @@
-# =============================================================================
-# TelemetryFlow Collector Configuration (Standalone)
-# =============================================================================
-# Community Enterprise Observability Platform (CEOP)
+# OpenTelemetry Collector Configuration (Standard OTEL Format)
+# TelemetryFlow Collector - Community Enterprise Observability Platform (CEOP)
 # Copyright (c) 2024-2026 TelemetryFlow. All rights reserved.
 #
-# This configuration is for the TelemetryFlow Standalone binary only:
+# This config uses STANDARD OpenTelemetry Collector format.
+# Use with OCB build: ./build/tfo-collector-ocb --config configs/otel-collector.yaml
+# Or with community OTEL collector: otelcol --config configs/otel-collector.yaml
 #
-#   Usage: ./tfo-collector start --config tfo-collector.yaml
+# For the TelemetryFlow Standalone build (custom format), use: configs/tfo-collector.yaml
 #
-# For OCB builds, use otel-collector.yaml instead:
-#
-#   Usage: ./tfo-collector-ocb --config otel-collector.yaml
-#
-# Copy to: /etc/tfo-collector/tfo-collector.yaml or ~/.tfo-collector/
-#
-# =============================================================================
-# Environment Variables
-# =============================================================================
-#   TELEMETRYFLOW_API_KEY_ID      - API Key ID for authentication (tfk_xxx)
-#   TELEMETRYFLOW_API_KEY_SECRET  - API Key Secret for authentication (tfs_xxx)
-#   TELEMETRYFLOW_ENDPOINT        - TelemetryFlow backend endpoint (host:port)
-#   TELEMETRYFLOW_COLLECTOR_ID    - Unique collector identifier (optional)
-#   TELEMETRYFLOW_COLLECTOR_NAME  - Human-readable collector name (optional)
-#   TELEMETRYFLOW_ENVIRONMENT     - Deployment environment (optional)
-#
-# Example .env file:
-#   TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id
-#   TELEMETRYFLOW_API_KEY_SECRET=tfs_your_key_secret
-#   TELEMETRYFLOW_ENDPOINT=collector.telemetryflow.id:4317
-#
-# =============================================================================
-
-# =============================================================================
-# TelemetryFlow Extensions (Standalone-specific)
-# =============================================================================
-# These sections are TelemetryFlow-specific for collector identification
-# and backend authentication. Only used by the Standalone binary.
-
-telemetryflow:
-  # API Key ID (format: tfk_xxx) - used for collector identification
-  api_key_id: "${TELEMETRYFLOW_API_KEY_ID}"
-  # API Key Secret (format: tfs_xxx) - used for authentication
-  api_key_secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
-  # TelemetryFlow backend endpoint for sending telemetry
-  endpoint: "${TELEMETRYFLOW_ENDPOINT:-localhost:4317}"
-  # TLS settings for backend connection
-  tls:
-    enabled: true
-    insecure_skip_verify: false
-
-# Collector identification
-collector:
-  # Unique collector identifier (auto-generated if empty)
-  id: "${TELEMETRYFLOW_COLLECTOR_ID}"
-  # Collector hostname (auto-detected if empty)
-  hostname: ""
-  # Human-readable collector name
-  name: "${TELEMETRYFLOW_COLLECTOR_NAME:-TelemetryFlow Collector}"
-  # Human-readable description
-  description: "TelemetryFlow Collector - Community Enterprise Observability Platform"
-  # Collector version (auto-populated at build time)
-  version: ""
-  # Custom tags for labeling and filtering
-  tags:
-    environment: "${TELEMETRYFLOW_ENVIRONMENT:-production}"
-    datacenter: "tfo-collector"
+# Features demonstrated:
+# - Metrics, Logs, Traces collection
+# - Exemplars support via spanmetrics connector
+# - Service graph generation
+# - Legacy format support (Jaeger, Zipkin)
 
 # =============================================================================
 # RECEIVERS - How telemetry data enters the collector
@@ -73,14 +21,12 @@ receivers:
   # OTLP receiver for OpenTelemetry Protocol (metrics, logs, traces)
   otlp:
     protocols:
-      # gRPC protocol settings
       grpc:
         endpoint: "0.0.0.0:4317"
         max_recv_msg_size_mib: 4
         max_concurrent_streams: 100
         read_buffer_size: 524288
         write_buffer_size: 524288
-        # Keepalive settings
         keepalive:
           server_parameters:
             max_connection_idle: 15s
@@ -88,7 +34,6 @@ receivers:
             max_connection_age_grace: 5s
             time: 10s
             timeout: 5s
-      # HTTP protocol settings
       http:
         endpoint: "0.0.0.0:4318"
         cors:
@@ -97,6 +42,22 @@ receivers:
           allowed_headers:
             - "*"
           max_age: 7200
+
+  # Jaeger receiver for legacy Jaeger traces (uncomment to enable)
+  # jaeger:
+  #   protocols:
+  #     grpc:
+  #       endpoint: "0.0.0.0:14250"
+  #     thrift_http:
+  #       endpoint: "0.0.0.0:14268"
+  #     thrift_compact:
+  #       endpoint: "0.0.0.0:6831"
+  #     thrift_binary:
+  #       endpoint: "0.0.0.0:6832"
+
+  # Zipkin receiver for legacy Zipkin traces (uncomment to enable)
+  # zipkin:
+  #   endpoint: "0.0.0.0:9411"
 
   # Prometheus scrape receiver (uncomment to enable)
   # prometheus:
@@ -111,6 +72,25 @@ receivers:
   #               - "localhost:9100"
   #             labels:
   #               env: "production"
+
+  # Host metrics receiver for system metrics (uncomment to enable)
+  # hostmetrics:
+  #   collection_interval: 30s
+  #   scrapers:
+  #     cpu:
+  #       metrics:
+  #         system.cpu.utilization:
+  #           enabled: true
+  #     memory:
+  #       metrics:
+  #         system.memory.utilization:
+  #           enabled: true
+  #     disk:
+  #     filesystem:
+  #     load:
+  #     network:
+  #     paging:
+  #     processes:
 
 # =============================================================================
 # PROCESSORS - How telemetry data is processed
@@ -135,21 +115,69 @@ processors:
         value: telemetryflow
         action: upsert
       - key: deployment.environment
-        value: "${TELEMETRYFLOW_ENVIRONMENT:-production}"
+        value: production
         action: upsert
 
-  # Attributes processor (uncomment to enable)
+  # Resource detection processor (uncomment to enable auto-detection)
+  # resourcedetection:
+  #   detectors: [env, system, docker, gcp, aws, azure]
+  #   timeout: 5s
+  #   override: false
+
+  # Attributes processor for data transformation (uncomment to enable)
   # attributes:
   #   actions:
   #     - key: environment
   #       action: insert
   #       value: production
 
+  # K8s attributes processor (uncomment for Kubernetes environments)
+  # k8sattributes:
+  #   auth_type: serviceAccount
+  #   passthrough: false
+  #   extract:
+  #     metadata:
+  #       - k8s.pod.name
+  #       - k8s.pod.uid
+  #       - k8s.deployment.name
+  #       - k8s.namespace.name
+  #       - k8s.node.name
+  #       - k8s.container.name
+  #     labels:
+  #       - tag_name: app
+  #         key: app.kubernetes.io/name
+  #         from: pod
+  #   pod_association:
+  #     - sources:
+  #         - from: resource_attribute
+  #           name: k8s.pod.ip
+
+  # Tail sampling processor (uncomment for intelligent trace sampling)
+  # tail_sampling:
+  #   decision_wait: 10s
+  #   num_traces: 100
+  #   expected_new_traces_per_sec: 100
+  #   policies:
+  #     - name: errors-policy
+  #       type: status_code
+  #       status_code:
+  #         status_codes:
+  #           - ERROR
+  #     - name: slow-traces-policy
+  #       type: latency
+  #       latency:
+  #         threshold_ms: 1000
+  #     - name: probabilistic-policy
+  #       type: probabilistic
+  #       probabilistic:
+  #         sampling_percentage: 10
+
 # =============================================================================
 # CONNECTORS - Pipeline bridging for Exemplars and derived metrics
 # =============================================================================
 connectors:
   # Span metrics connector - derives metrics from traces with EXEMPLARS support
+  # This enables metrics with trace exemplars for drill-down from metrics to traces
   spanmetrics:
     histogram:
       explicit:
@@ -162,7 +190,7 @@ connectors:
       - name: rpc.method
       - name: rpc.service
     exemplars:
-      enabled: true
+      enabled: true  # Enable exemplars for metrics-to-traces correlation
     namespace: traces
     metrics_flush_interval: 15s
 
@@ -182,6 +210,13 @@ connectors:
       - messaging.system
       - rpc.service
 
+  # Exceptions connector - extracts exceptions from traces (uncomment to enable)
+  # exceptions:
+  #   dimensions:
+  #     - service.name
+  #     - exception.type
+  #     - exception.message
+
 # =============================================================================
 # EXPORTERS - Where telemetry data is sent
 # =============================================================================
@@ -200,18 +235,26 @@ exporters:
       collector: tfo-collector
     send_timestamps: true
     metric_expiration: 5m
-    enable_open_metrics: true
-    resource_to_telemetry_conversion: true
+    enable_open_metrics: true  # Required for exemplars
+    resource_to_telemetry_conversion:
+      enabled: true
 
-  # OTLP exporter for forwarding to TelemetryFlow backend (uncomment to enable)
-  # otlp:
-  #   endpoint: "${TELEMETRYFLOW_ENDPOINT:-localhost:4317}"
+  # Prometheus remote write exporter (with exemplars support, uncomment to enable)
+  # prometheusremotewrite:
+  #   endpoint: "http://prometheus:9090/api/v1/write"
   #   tls:
-  #     insecure: false
+  #     insecure: true
+  #   send_metadata: true
+  #   resource_to_telemetry_conversion:
+  #     enabled: true
+
+  # OTLP exporter for forwarding to other collectors/backends (uncomment to enable)
+  # otlp:
+  #   endpoint: "your-backend:4317"
+  #   tls:
+  #     insecure: true
   #   headers:
-  #     X-TelemetryFlow-Key-ID: "${TELEMETRYFLOW_API_KEY_ID}"
-  #     X-TelemetryFlow-Key-Secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
-  #     X-TelemetryFlow-Collector-ID: "${TELEMETRYFLOW_COLLECTOR_ID}"
+  #     X-API-Key: "${env:TELEMETRYFLOW_API_KEY}"
   #   compression: gzip
   #   timeout: 30s
   #   retry_on_failure:
@@ -224,17 +267,21 @@ exporters:
   #     num_consumers: 10
   #     queue_size: 1000
 
-  # OTLP HTTP exporter (uncomment to enable)
-  # otlphttp:
-  #   endpoint: "https://${TELEMETRYFLOW_ENDPOINT:-localhost:4318}"
+  # OTLP exporter to Jaeger (uncomment to enable)
+  # otlp/jaeger:
+  #   endpoint: "jaeger:4317"
   #   tls:
-  #     insecure: false
-  #   headers:
-  #     X-TelemetryFlow-Key-ID: "${TELEMETRYFLOW_API_KEY_ID}"
-  #     X-TelemetryFlow-Key-Secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
-  #     X-TelemetryFlow-Collector-ID: "${TELEMETRYFLOW_COLLECTOR_ID}"
-  #   compression: gzip
-  #   timeout: 30s
+  #     insecure: true
+
+  # Loki exporter for logs (uncomment to enable)
+  # loki:
+  #   endpoint: "http://loki:3100/loki/api/v1/push"
+  #   labels:
+  #     attributes:
+  #       service.name: "service_name"
+  #       service.namespace: "namespace"
+  #     resource:
+  #       deployment.environment: "environment"
 
   # File exporter for local storage (uncomment to enable)
   # file:
@@ -247,6 +294,27 @@ exporters:
   #     max_days: 7
   #     max_backups: 3
   #     localtime: true
+
+  # Elasticsearch exporter for logs and traces (uncomment to enable)
+  # elasticsearch:
+  #   endpoints:
+  #     - "http://elasticsearch:9200"
+  #   logs_index: "otel-logs"
+  #   traces_index: "otel-traces"
+  #   flush:
+  #     bytes: 5000000
+  #     interval: 30s
+
+  # ClickHouse exporter for analytics (uncomment to enable)
+  # clickhouse:
+  #   endpoint: "tcp://clickhouse:9000"
+  #   database: otel
+  #   username: default
+  #   password: ""
+  #   logs_table_name: otel_logs
+  #   traces_table_name: otel_traces
+  #   metrics_table_name: otel_metrics
+  #   ttl: 72h
 
 # =============================================================================
 # EXTENSIONS - Additional collector capabilities
@@ -264,6 +332,14 @@ extensions:
   pprof:
     endpoint: "0.0.0.0:1777"
 
+  # File storage extension for persistent queuing (uncomment to enable)
+  # file_storage:
+  #   directory: /var/lib/tfo-collector/queue
+  #   timeout: 10s
+  #   compaction:
+  #     on_start: true
+  #     on_rebound: true
+
 # =============================================================================
 # SERVICE - Defines active components and pipelines
 # =============================================================================
@@ -271,32 +347,42 @@ service:
   extensions: [health_check, zpages, pprof]
 
   pipelines:
+    # ==========================================================================
     # Traces pipeline - receives traces, exports to debug and spanmetrics connector
+    # ==========================================================================
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [debug, spanmetrics, servicegraph]
+      exporters: [debug, spanmetrics, servicegraph]  # Export to connectors for derived metrics
 
+    # ==========================================================================
     # Metrics pipeline - receives metrics from OTLP
+    # ==========================================================================
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
       exporters: [debug, prometheus]
 
+    # ==========================================================================
     # Metrics from traces pipeline - receives derived metrics from spanmetrics connector
     # These metrics include EXEMPLARS for correlation with traces
+    # ==========================================================================
     metrics/spanmetrics:
       receivers: [spanmetrics]
       processors: [memory_limiter, batch]
       exporters: [prometheus]
 
+    # ==========================================================================
     # Metrics from service graph - receives service dependency metrics
+    # ==========================================================================
     metrics/servicegraph:
       receivers: [servicegraph]
       processors: [memory_limiter, batch]
       exporters: [prometheus]
 
+    # ==========================================================================
     # Logs pipeline
+    # ==========================================================================
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]

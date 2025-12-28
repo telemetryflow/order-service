@@ -30,14 +30,14 @@ func NewOrderitemHandler(
 
 // RegisterRoutes registers orderitem routes
 func (h *OrderitemHandler) RegisterRoutes(g *echo.Group) {
-	g.POST("/orderitems", h.Create)
-	g.GET("/orderitems", h.List)
-	g.GET("/orderitems/:id", h.GetByID)
-	g.PUT("/orderitems/:id", h.Update)
-	g.DELETE("/orderitems/:id", h.Delete)
+	g.POST("/order-items", h.Create)
+	g.GET("/order-items", h.List)
+	g.GET("/order-items/:id", h.GetByID)
+	g.PUT("/order-items/:id", h.Update)
+	g.DELETE("/order-items/:id", h.Delete)
 }
 
-// Create handles POST /orderitems
+// Create handles POST /order-items
 func (h *OrderitemHandler) Create(c echo.Context) error {
 	var req dto.CreateOrderitemRequest
 	if err := c.Bind(&req); err != nil {
@@ -49,8 +49,8 @@ func (h *OrderitemHandler) Create(c echo.Context) error {
 	}
 
 	cmd := &command.CreateOrderitemCommand{
-		OrderId:   req.OrderId,
-		ProductId: req.ProductId,
+		OrderID:   req.OrderID,
+		ProductID: req.ProductID,
 		Quantity:  req.Quantity,
 		Price:     req.Price,
 	}
@@ -62,9 +62,9 @@ func (h *OrderitemHandler) Create(c echo.Context) error {
 	return response.Created(c, nil, "Orderitem created successfully")
 }
 
-// List handles GET /orderitems
+// List handles GET /order-items
 func (h *OrderitemHandler) List(c echo.Context) error {
-	var q query.GetAllorderitemsQuery
+	var q query.GetAllOrderItemsQuery
 	if err := c.Bind(&q); err != nil {
 		return response.BadRequest(c, "Invalid query parameters")
 	}
@@ -78,7 +78,7 @@ func (h *OrderitemHandler) List(c echo.Context) error {
 	return response.Success(c, result, "")
 }
 
-// GetByID handles GET /orderitems/:id
+// GetByID handles GET /order-items/:id
 func (h *OrderitemHandler) GetByID(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -94,7 +94,7 @@ func (h *OrderitemHandler) GetByID(c echo.Context) error {
 	return response.Success(c, result, "")
 }
 
-// Update handles PUT /orderitems/:id
+// Update handles PUT /order-items/:id
 func (h *OrderitemHandler) Update(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -112,8 +112,8 @@ func (h *OrderitemHandler) Update(c echo.Context) error {
 
 	cmd := &command.UpdateOrderitemCommand{
 		ID:        id,
-		OrderId:   req.OrderId,
-		ProductId: req.ProductId,
+		OrderID:   req.OrderID,
+		ProductID: req.ProductID,
 		Quantity:  req.Quantity,
 		Price:     req.Price,
 	}
@@ -125,7 +125,7 @@ func (h *OrderitemHandler) Update(c echo.Context) error {
 	return response.Success(c, nil, "Orderitem updated successfully")
 }
 
-// Delete handles DELETE /orderitems/:id
+// Delete handles DELETE /order-items/:id
 func (h *OrderitemHandler) Delete(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

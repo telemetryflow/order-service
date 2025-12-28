@@ -49,14 +49,14 @@ func (q *ListOrderitemsQuery) Offset() int {
 	return (q.Page - 1) * q.PageSize
 }
 
-// GetAllorderitemsQuery represents the get all orderitems query with pagination
-type GetAllorderitemsQuery struct {
+// GetAllOrderItemsQuery represents the get all orderitems query with pagination
+type GetAllOrderItemsQuery struct {
 	Offset int `json:"offset" query:"offset"`
 	Limit  int `json:"limit" query:"limit"`
 }
 
 // Validate validates the query
-func (q *GetAllorderitemsQuery) Validate() error {
+func (q *GetAllOrderItemsQuery) Validate() error {
 	if q.Offset < 0 {
 		q.Offset = 0
 	}
@@ -66,15 +66,15 @@ func (q *GetAllorderitemsQuery) Validate() error {
 	return nil
 }
 
-// SearchorderitemsQuery represents the search orderitems query
-type SearchorderitemsQuery struct {
+// SearchOrderItemsQuery represents the search orderitems query
+type SearchOrderItemsQuery struct {
 	Query  string `json:"query" query:"query"`
 	Offset int    `json:"offset" query:"offset"`
 	Limit  int    `json:"limit" query:"limit"`
 }
 
 // Validate validates the query
-func (q *SearchorderitemsQuery) Validate() error {
+func (q *SearchOrderItemsQuery) Validate() error {
 	if q.Offset < 0 {
 		q.Offset = 0
 	}

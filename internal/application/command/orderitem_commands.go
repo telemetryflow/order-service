@@ -8,8 +8,8 @@ import (
 
 // CreateOrderitemCommand represents the create orderitem command
 type CreateOrderitemCommand struct {
-	OrderId   uuid.UUID `json:"orderId" validate:"required"`
-	ProductId uuid.UUID `json:"productId" validate:"required"`
+	OrderID   uuid.UUID `json:"order_id" validate:"required"`
+	ProductID uuid.UUID `json:"product_id" validate:"required"`
 	Quantity  int       `json:"quantity" validate:"required"`
 	Price     float64   `json:"price" validate:"required"`
 }
@@ -22,14 +22,14 @@ func (c *CreateOrderitemCommand) Validate() error {
 
 // ToEntity converts the command to an entity
 func (c *CreateOrderitemCommand) ToEntity() *entity.Orderitem {
-	return entity.NewOrderitem(c.OrderId, c.ProductId, c.Quantity, c.Price)
+	return entity.NewOrderitem(c.OrderID, c.ProductID, c.Quantity, c.Price)
 }
 
 // UpdateOrderitemCommand represents the update orderitem command
 type UpdateOrderitemCommand struct {
 	ID        uuid.UUID `json:"id" validate:"required"`
-	OrderId   uuid.UUID `json:"orderId" validate:"required"`
-	ProductId uuid.UUID `json:"productId" validate:"required"`
+	OrderID   uuid.UUID `json:"order_id" validate:"required"`
+	ProductID uuid.UUID `json:"product_id" validate:"required"`
 	Quantity  int       `json:"quantity" validate:"required"`
 	Price     float64   `json:"price" validate:"required"`
 }
@@ -44,7 +44,7 @@ func (c *UpdateOrderitemCommand) Validate() error {
 
 // ToEntity converts the command to an entity
 func (c *UpdateOrderitemCommand) ToEntity() *entity.Orderitem {
-	e := entity.NewOrderitem(c.OrderId, c.ProductId, c.Quantity, c.Price)
+	e := entity.NewOrderitem(c.OrderID, c.ProductID, c.Quantity, c.Price)
 	e.ID = c.ID
 	return e
 }

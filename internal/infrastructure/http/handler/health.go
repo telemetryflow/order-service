@@ -2,21 +2,21 @@
 package handler
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 // HealthHandler handles health check endpoints
 type HealthHandler struct {
-	db        *sql.DB
+	db        *gorm.DB
 	startTime time.Time
 }
 
 // NewHealthHandler creates a new health handler
-func NewHealthHandler(db *sql.DB) *HealthHandler {
+func NewHealthHandler(db *gorm.DB) *HealthHandler {
 	return &HealthHandler{
 		db:        db,
 		startTime: time.Now(),
@@ -47,7 +47,16 @@ func (h *HealthHandler) Ready(c echo.Context) error {
 
 	// Check database connection
 	if h.db != nil {
-		if err := h.db.Ping(); err != nil {
+		sqlDB, err := h.db.DB()
+		if err != nil {
+			checks["database"] = "unhealthy: " + err.Error()
+			return c.JSON(http.StatusServiceUnavailable, HealthResponse{
+				Status:    "unhealthy",
+				Timestamp: time.Now(),
+				Checks:    checks,
+			})
+		}
+		if err := sqlDB.Ping(); err != nil {
 			checks["database"] = "unhealthy: " + err.Error()
 			return c.JSON(http.StatusServiceUnavailable, HealthResponse{
 				Status:    "unhealthy",

@@ -1,0 +1,26 @@
+# GolangCI-Lint Configuration (v2)
+# TelemetryFlow SDK API - Community Enterprise Observability Platform (CEOP)
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - staticcheck
+    - govet
+    - errcheck
+    - ineffassign
+    - unused
+  exclusions:
+    paths:
+      - vendor
+
+  settings:
+    staticcheck:
+      checks:
+        - "all"
+        - "-SA1019"

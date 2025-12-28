@@ -31,7 +31,7 @@ telemetry:
   # api_key_secret: from environment variable TELEMETRYFLOW_API_KEY_SECRET
   endpoint: api.telemetryflow.id:4317
   service_name: order-api
-  service_version: 1.0.0
+  service_Version: 1.1.0
 
 log:
   level: info

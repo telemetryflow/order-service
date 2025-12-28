@@ -6,21 +6,21 @@ package persistence
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/telemetryflow/order-service/internal/domain/entity"
 	"github.com/telemetryflow/order-service/internal/domain/repository"
+	"gorm.io/gorm"
 )
 
-// orderRepository implements repository.OrderRepository
+// orderRepository implements repository.OrderRepository using GORM
 type orderRepository struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
 // NewOrderRepository creates a new Order repository
-func NewOrderRepository(db *sql.DB) repository.OrderRepository {
+func NewOrderRepository(db *gorm.DB) repository.OrderRepository {
 	return &orderRepository{
 		db: db,
 	}
@@ -28,91 +28,39 @@ func NewOrderRepository(db *sql.DB) repository.OrderRepository {
 
 // Create creates a new order
 func (r *orderRepository) Create(ctx context.Context, order *entity.Order) error {
-	query := `
-		INSERT INTO orders (
-			id, customer_id, total, status, created_at, updated_at
-		) VALUES (
-			$1, $2, $3, $4, $5, $6
-		)`
-
-	_, err := r.db.ExecContext(ctx, query,
-		order.ID,
-		order.CustomerId,
-		order.Total,
-		order.Status,
-		order.CreatedAt,
-		order.UpdatedAt,
-	)
-	return err
+	return r.db.WithContext(ctx).Create(order).Error
 }
 
 // FindByID retrieves an order by ID
 func (r *orderRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Order, error) {
-	query := `
-		SELECT id, customer_id, total, status, created_at, updated_at
-		FROM orders
-		WHERE id = $1 AND deleted_at IS NULL`
-
-	row := r.db.QueryRowContext(ctx, query, id)
-
-	order := &entity.Order{}
-	err := row.Scan(
-		&order.ID,
-		&order.CustomerId,
-		&order.Total,
-		&order.Status,
-		&order.CreatedAt,
-		&order.UpdatedAt,
-	)
+	var order entity.Order
+	err := r.db.WithContext(ctx).First(&order, "id = ?", id).Error
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("order not found")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("order not found")
 		}
 		return nil, err
 	}
-
-	return order, nil
+	return &order, nil
 }
 
 // FindAll retrieves all orders with pagination
 func (r *orderRepository) FindAll(ctx context.Context, offset, limit int) ([]entity.Order, int64, error) {
-	// Count total records
-	countQuery := "SELECT COUNT(*) FROM orders WHERE deleted_at IS NULL"
+	var orders []entity.Order
 	var total int64
-	err := r.db.QueryRowContext(ctx, countQuery).Scan(&total)
-	if err != nil {
+
+	// Count total records
+	if err := r.db.WithContext(ctx).Model(&entity.Order{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	// Get paginated records
-	query := `
-		SELECT id, customer_id, total, status, created_at, updated_at
-		FROM orders
-		WHERE deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2`
-
-	rows, err := r.db.QueryContext(ctx, query, limit, offset)
-	if err != nil {
+	if err := r.db.WithContext(ctx).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&orders).Error; err != nil {
 		return nil, 0, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	var orders []entity.Order
-	for rows.Next() {
-		var order entity.Order
-		err := rows.Scan(
-			&order.ID,
-			&order.CustomerId,
-			&order.Total,
-			&order.Status,
-			&order.CreatedAt,
-			&order.UpdatedAt,
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-		orders = append(orders, order)
 	}
 
 	return orders, total, nil
@@ -120,65 +68,56 @@ func (r *orderRepository) FindAll(ctx context.Context, offset, limit int) ([]ent
 
 // Update updates an order
 func (r *orderRepository) Update(ctx context.Context, order *entity.Order) error {
-	query := `
-		UPDATE orders
-		SET customer_id = $1, total = $2, status = $3, updated_at = $4
-		WHERE id = $5 AND deleted_at IS NULL`
-
-	_, err := r.db.ExecContext(ctx, query,
-		order.CustomerId,
-		order.Total,
-		order.Status,
-		order.UpdatedAt,
-		order.ID,
-	)
-	return err
+	return r.db.WithContext(ctx).Save(order).Error
 }
 
 // Delete soft-deletes an order by ID
 func (r *orderRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := "UPDATE orders SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL"
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
+	return r.db.WithContext(ctx).Delete(&entity.Order{}, "id = ?", id).Error
 }
 
 // HardDelete permanently deletes an order by ID
 func (r *orderRepository) HardDelete(ctx context.Context, id uuid.UUID) error {
-	query := "DELETE FROM orders WHERE id = $1"
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
+	return r.db.WithContext(ctx).Unscoped().Delete(&entity.Order{}, "id = ?", id).Error
 }
 
 // FindByStatus finds orders by status
 func (r *orderRepository) FindByStatus(ctx context.Context, status string) ([]entity.Order, error) {
-	query := `
-		SELECT id, customer_id, total, status, created_at, updated_at
-		FROM orders
-		WHERE status = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC`
-
-	rows, err := r.db.QueryContext(ctx, query, status)
+	var orders []entity.Order
+	err := r.db.WithContext(ctx).
+		Where("status = ?", status).
+		Order("created_at DESC").
+		Find(&orders).Error
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
-
-	var orders []entity.Order
-	for rows.Next() {
-		var order entity.Order
-		err := rows.Scan(
-			&order.ID,
-			&order.CustomerId,
-			&order.Total,
-			&order.Status,
-			&order.CreatedAt,
-			&order.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		orders = append(orders, order)
-	}
-
 	return orders, nil
+}
+
+// FindByCustomerID finds orders by customer ID
+func (r *orderRepository) FindByCustomerID(ctx context.Context, customerID uuid.UUID) ([]entity.Order, error) {
+	var orders []entity.Order
+	err := r.db.WithContext(ctx).
+		Where("customer_id = ?", customerID).
+		Order("created_at DESC").
+		Find(&orders).Error
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
+}
+
+// FindWithItems retrieves an order with its items
+func (r *orderRepository) FindWithItems(ctx context.Context, id uuid.UUID) (*entity.Order, error) {
+	var order entity.Order
+	err := r.db.WithContext(ctx).
+		Preload("Items").
+		First(&order, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("order not found")
+		}
+		return nil, err
+	}
+	return &order, nil
 }

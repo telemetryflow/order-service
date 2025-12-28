@@ -11,8 +11,8 @@ import (
 // OrderitemResponse represents the orderitem API response
 type OrderitemResponse struct {
 	ID        uuid.UUID `json:"id"`
-	OrderId   uuid.UUID `json:"orderId"`
-	ProductId uuid.UUID `json:"productId"`
+	OrderID   uuid.UUID `json:"order_id"`
+	ProductID uuid.UUID `json:"product_id"`
 	Quantity  int       `json:"quantity"`
 	Price     float64   `json:"price"`
 	CreatedAt time.Time `json:"created_at"`
@@ -23,8 +23,8 @@ type OrderitemResponse struct {
 func FromOrderitem(e *entity.Orderitem) OrderitemResponse {
 	return OrderitemResponse{
 		ID:        e.ID,
-		OrderId:   e.OrderId,
-		ProductId: e.ProductId,
+		OrderID:   e.OrderID,
+		ProductID: e.ProductID,
 		Quantity:  e.Quantity,
 		Price:     e.Price,
 		CreatedAt: e.CreatedAt,
@@ -43,16 +43,16 @@ func FromOrderitems(entities []entity.Orderitem) []OrderitemResponse {
 
 // CreateOrderitemRequest represents the create orderitem request
 type CreateOrderitemRequest struct {
-	OrderId   uuid.UUID `json:"orderId" validate:"required"`
-	ProductId uuid.UUID `json:"productId" validate:"required"`
+	OrderID   uuid.UUID `json:"order_id" validate:"required"`
+	ProductID uuid.UUID `json:"product_id" validate:"required"`
 	Quantity  int       `json:"quantity" validate:"required"`
 	Price     float64   `json:"price" validate:"required"`
 }
 
 // UpdateOrderitemRequest represents the update orderitem request
 type UpdateOrderitemRequest struct {
-	OrderId   uuid.UUID `json:"orderId" validate:"required"`
-	ProductId uuid.UUID `json:"productId" validate:"required"`
+	OrderID   uuid.UUID `json:"order_id" validate:"required"`
+	ProductID uuid.UUID `json:"product_id" validate:"required"`
 	Quantity  int       `json:"quantity" validate:"required"`
 	Price     float64   `json:"price" validate:"required"`
 }

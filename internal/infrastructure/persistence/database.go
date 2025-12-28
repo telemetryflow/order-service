@@ -2,16 +2,17 @@
 package persistence
 
 import (
-	"database/sql"
 	"fmt"
-	"time"
+	"log"
 
-	_ "github.com/lib/pq"
 	"github.com/telemetryflow/order-service/internal/infrastructure/config"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-// NewDatabase creates a new database connection
-func NewDatabase(cfg config.DatabaseConfig) (*sql.DB, error) {
+// NewDatabase creates a new GORM database connection
+func NewDatabase(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	var dsn string
 
 	switch cfg.Driver {
@@ -29,58 +30,49 @@ func NewDatabase(cfg config.DatabaseConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.Driver)
 	}
 
-	db, err := sql.Open(cfg.Driver, dsn)
+	// Configure GORM logger
+	gormLogger := logger.Default.LogMode(logger.Silent)
+	if cfg.Debug {
+		gormLogger = logger.Default.LogMode(logger.Info)
+	}
+
+	// Open GORM connection
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger:                 gormLogger,
+		SkipDefaultTransaction: true,
+		PrepareStmt:            true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
+	// Get underlying sql.DB to configure connection pool
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
 	// Configure connection pool
-	db.SetMaxOpenConns(cfg.MaxOpenConns)
-	db.SetMaxIdleConns(cfg.MaxIdleConns)
-	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 
 	// Test connection
-	if err := db.Ping(); err != nil {
+	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
+
+	log.Printf("Database connected successfully: %s:%s/%s", cfg.Host, cfg.Port, cfg.Name)
 
 	return db, nil
 }
 
 // Transaction executes a function within a database transaction
-func Transaction(db *sql.DB, fn func(*sql.Tx) error) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback()
-			panic(p)
-		}
-	}()
-
-	if err := fn(tx); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
+func Transaction(db *gorm.DB, fn func(*gorm.DB) error) error {
+	return db.Transaction(fn)
 }
 
-// NullString converts a string pointer to sql.NullString
-func NullString(s *string) sql.NullString {
-	if s == nil {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: *s, Valid: true}
-}
-
-// NullTime converts a time pointer to sql.NullTime
-func NullTime(t *time.Time) sql.NullTime {
-	if t == nil {
-		return sql.NullTime{}
-	}
-	return sql.NullTime{Time: *t, Valid: true}
+// AutoMigrate runs GORM auto migration for the given models
+func AutoMigrate(db *gorm.DB, models ...interface{}) error {
+	return db.AutoMigrate(models...)
 }

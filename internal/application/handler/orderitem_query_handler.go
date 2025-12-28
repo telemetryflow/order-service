@@ -34,7 +34,7 @@ func (h *OrderitemQueryHandler) HandleOrderitemGetByID(ctx context.Context, qry 
 }
 
 // HandleOrderitemGetAll handles get all orderitems query
-func (h *OrderitemQueryHandler) HandleOrderitemGetAll(ctx context.Context, qry *query.GetAllorderitemsQuery) (*dto.OrderitemListResponse, error) {
+func (h *OrderitemQueryHandler) HandleOrderitemGetAll(ctx context.Context, qry *query.GetAllOrderItemsQuery) (*dto.OrderitemListResponse, error) {
 	entities, total, err := h.repo.FindAll(ctx, qry.Offset, qry.Limit)
 	if err != nil {
 		return nil, err
