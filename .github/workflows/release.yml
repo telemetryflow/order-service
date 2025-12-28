@@ -44,6 +44,8 @@ env:
   DESCRIPTION: Order management microservice for the TelemetryFlow platform
   LICENSE: Apache-2.0
   HOMEPAGE: https://telemetryflow.id
+  # Bypass Go proxy for TelemetryFlow private modules
+  GOPRIVATE: github.com/telemetryflow/*
 
 permissions:
   contents: write
