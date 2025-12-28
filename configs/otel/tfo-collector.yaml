@@ -52,7 +52,7 @@ telemetryflow:
 # Collector identification
 collector:
   # Unique collector identifier (auto-generated if empty)
-  id: "${TELEMETRYFLOW_COLLECTOR_ID}"
+  id: ""
   # Collector hostname (auto-detected if empty)
   hostname: ""
   # Human-readable collector name
@@ -63,7 +63,7 @@ collector:
   version: ""
   # Custom tags for labeling and filtering
   tags:
-    environment: "${TELEMETRYFLOW_ENVIRONMENT:-production}"
+    environment: "${TELEMETRYFLOW_ENVIRONMENT:-develop}"
     datacenter: "tfo-collector"
 
 # =============================================================================
@@ -110,7 +110,7 @@ receivers:
   #           - targets:
   #               - "localhost:9100"
   #             labels:
-  #               env: "production"
+  #               env: "development"
 
 # =============================================================================
 # PROCESSORS - How telemetry data is processed
@@ -135,7 +135,7 @@ processors:
         value: telemetryflow
         action: upsert
       - key: deployment.environment
-        value: "${TELEMETRYFLOW_ENVIRONMENT:-production}"
+        value: "${TELEMETRYFLOW_ENVIRONMENT:-development}"
         action: upsert
 
   # Attributes processor (uncomment to enable)
@@ -143,7 +143,7 @@ processors:
   #   actions:
   #     - key: environment
   #       action: insert
-  #       value: production
+  #       value: development
 
 # =============================================================================
 # CONNECTORS - Pipeline bridging for Exemplars and derived metrics
