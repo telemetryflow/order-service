@@ -134,12 +134,12 @@ services:
     # command: ["--config=/etc/otelcol-contrib/config.yaml"]
     # =============================================================================
     # TelemetryFlow Collector OCB (TFO-Collector-OCB) - Standard OTEL format
-    # image: telemetryflow/telemetryflow-collector-ocb:${OTEL_VERSION:-latest}
-    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
+    image: telemetryflow/telemetryflow-collector-ocb:${OTEL_VERSION:-latest}
+    command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
     # =============================================================================
     # TelemetryFlow Collector (TFO-Collector) - Custom TFO format (OTLP not implemented yet)
-    image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-latest}
-    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
+    # image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-latest}
+    # command: ["--config=/etc/tfo-collector/tfo-collector.yaml"]
     # =============================================================================
     container_name: ${CONTAINER_OTEL:-order_service_otel}
     restart: unless-stopped
@@ -148,10 +148,10 @@ services:
       # - ./configs/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
       # =============================================================================
       # TelemetryFlow Collector OCB config (Standard OTEL format)
-      # - ./configs/otel/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
+      - ./configs/otel/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
       # =============================================================================
       # TelemetryFlow Collector config (Custom TFO format)
-      - ./configs/otel/tfo-collector.yaml:/etc/tfo-collector/tfo-collector.yaml:ro
+      # - ./configs/otel/tfo-collector.yaml:/etc/tfo-collector/tfo-collector.yaml:ro
     ports:
       - "${PORT_OTEL_GRPC:-4317}:4317"     # OTLP gRPC
       - "${PORT_OTEL_HTTP:-4318}:4318"     # OTLP HTTP
