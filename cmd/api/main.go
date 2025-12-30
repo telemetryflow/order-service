@@ -56,7 +56,7 @@ func main() {
 		}
 	}()
 
-	log.Printf("order-api v1.0.0 started on port %s", cfg.Server.Port)
+	log.Printf("order-api v1.1.1 started on port %s", cfg.Server.Port)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)

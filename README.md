@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://opentelemetry.io/"><img src="https://img.shields.io/badge/OTLP-100%25%20Compliant-green" alt="OTLP Compliant"></a>
   <a href="https://hub.docker.com/r/telemetryflow/telemetryflow-sdk"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker" alt="Docker"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.0-blue.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.1-blue.svg" alt="Version"></a>
 </p>
 
 <p align="center">
@@ -241,7 +241,7 @@ Configuration is loaded from environment variables and `.env` file.
 | `TELEMETRYFLOW_API_KEY_SECRET` | TelemetryFlow API Key Secret | - |
 | `TELEMETRYFLOW_ENDPOINT` | OTLP endpoint | `localhost:4317` |
 | `TELEMETRYFLOW_SERVICE_NAME` | Service name | `order-api` |
-| `TELEMETRYFLOW_SERVICE_VERSION` | Service version | `1.0.0` |
+| `TELEMETRYFLOW_SERVICE_VERSION` | Service version | `1.1.1` |
 
 ### Docker Compose Configuration
 

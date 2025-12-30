@@ -8,30 +8,44 @@
 //
 // # Test Organization (DDD Layer Structure)
 //
-// Tests are organized by DDD layers in separate subpackages:
+// Tests are organized by DDD layers with granular subdirectories:
 //
 //	tests/unit/
-//	├── domain/           - Domain layer tests
-//	│   └── entity_test.go       - Domain entity tests (Base, Order, Orderitem)
+//	├── domain/                       - Domain layer tests
+//	│   └── entity/                   - Entity subdomain
+//	│       └── entity_test.go        - Domain entity tests (Base, Order, Orderitem)
 //	│
-//	├── application/      - Application layer tests
-//	│   ├── command_test.go      - CQRS command tests (Create, Update, Delete)
-//	│   ├── queries_test.go      - CQRS query tests (GetByID, GetAll, List, Search)
-//	│   ├── handler_test.go      - Application handler tests (Command & Query)
-//	│   ├── dto_test.go          - Data Transfer Object conversion tests
-//	│   └── query_test.go        - Additional query tests
+//	├── application/                  - Application layer tests
+//	│   ├── command/                  - Command subdomain
+//	│   │   └── command_test.go       - CQRS command tests (Create, Update, Delete)
+//	│   ├── query/                    - Query subdomain
+//	│   │   ├── queries_test.go       - CQRS query tests (GetByID, GetAll, List, Search)
+//	│   │   └── query_test.go         - Additional query tests
+//	│   ├── handler/                  - Handler subdomain
+//	│   │   └── handler_test.go       - Application handler tests (Command & Query)
+//	│   └── dto/                      - DTO subdomain
+//	│       └── dto_test.go           - Data Transfer Object conversion tests
 //	│
-//	├── infrastructure/   - Infrastructure layer tests
-//	│   ├── middleware_test.go   - HTTP middleware tests (Auth, RateLimit)
-//	│   ├── config_test.go       - Configuration loading tests
-//	│   └── http_handler_test.go - HTTP endpoint handler tests
+//	├── infrastructure/               - Infrastructure layer tests
+//	│   ├── config/                   - Configuration subdomain
+//	│   │   └── config_test.go        - Configuration loading tests
+//	│   ├── middleware/               - Middleware subdomain
+//	│   │   └── middleware_test.go    - HTTP middleware tests (Auth, RateLimit)
+//	│   └── http/                     - HTTP subdomain
+//	│       └── http_handler_test.go  - HTTP endpoint handler tests
 //	│
-//	├── pkg/              - Shared package tests
-//	│   ├── validator_test.go    - Request validation tests
-//	│   └── response_test.go     - HTTP response helper tests
+//	├── pkg/                          - Shared package tests
+//	│   ├── validator/                - Validator subdomain
+//	│   │   └── validator_test.go     - Request validation tests
+//	│   └── response/                 - Response subdomain
+//	│       └── response_test.go      - HTTP response helper tests
 //	│
-//	└── telemetry/        - Observability tests
-//	    └── telemetry_test.go    - TelemetryFlow SDK integration tests
+//	└── telemetry/                    - Observability tests
+//	    └── sdk/                      - SDK subdomain
+//	        └── telemetry_test.go     - TelemetryFlow SDK integration tests
+//
+// All tests use external test packages (package <name>_test) to ensure proper
+// encapsulation and test the public API surface.
 //
 // # Test Patterns
 //
@@ -54,6 +68,13 @@
 //	go test ./tests/unit/domain/... -v
 //	go test ./tests/unit/application/... -v
 //	go test ./tests/unit/infrastructure/... -v
+//
+// Run tests for a specific subdomain:
+//
+//	go test ./tests/unit/domain/entity/... -v
+//	go test ./tests/unit/application/command/... -v
+//	go test ./tests/unit/application/query/... -v
+//	go test ./tests/unit/infrastructure/config/... -v
 //
 // Run tests with coverage:
 //

@@ -2,32 +2,207 @@
 
 Comprehensive unit tests for the Order Service following Domain-Driven Design (DDD) and CQRS patterns.
 
+## Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Test Organization by DDD Layers"
+        direction TB
+
+        subgraph Domain["domain/"]
+            subgraph DomEntity["entity/"]
+                E[entity_test.go]
+            end
+        end
+
+        subgraph Application["application/"]
+            subgraph AppCmd["command/"]
+                C[command_test.go]
+            end
+            subgraph AppQry["query/"]
+                Q[queries_test.go]
+                Q2[query_test.go]
+            end
+            subgraph AppHdl["handler/"]
+                H[handler_test.go]
+            end
+            subgraph AppDTO["dto/"]
+                D[dto_test.go]
+            end
+        end
+
+        subgraph Infrastructure["infrastructure/"]
+            subgraph InfCfg["config/"]
+                CF[config_test.go]
+            end
+            subgraph InfMW["middleware/"]
+                M[middleware_test.go]
+            end
+            subgraph InfHTTP["http/"]
+                HH[http_handler_test.go]
+            end
+        end
+
+        subgraph Pkg["pkg/"]
+            subgraph PkgVal["validator/"]
+                V[validator_test.go]
+            end
+            subgraph PkgRes["response/"]
+                R[response_test.go]
+            end
+        end
+
+        subgraph Telemetry["telemetry/"]
+            subgraph TelSDK["sdk/"]
+                T[telemetry_test.go]
+            end
+        end
+    end
+
+    E --> |"Tests"| DE[Base, Order, Orderitem]
+    C --> |"Tests"| DC[Create, Update, Delete Commands]
+    Q --> |"Tests"| DQ[GetByID, GetAll, Search Queries]
+    H --> |"Tests"| DH[Command & Query Handlers]
+    D --> |"Tests"| DD[Entity ↔ DTO Conversion]
+    M --> |"Tests"| DM[Auth, RateLimit, RBAC]
+    CF --> |"Tests"| DCF[Env Vars, Defaults]
+    HH --> |"Tests"| DHH[HTTP Endpoints]
+    V --> |"Tests"| DV[Struct Tag Validation]
+    R --> |"Tests"| DR[API Response Format]
+    T --> |"Tests"| DT[SDK Init, Shutdown]
+
+    style Domain fill:#e1f5fe
+    style Application fill:#fff3e0
+    style Infrastructure fill:#f3e5f5
+    style Pkg fill:#e8f5e9
+    style Telemetry fill:#fce4ec
+```
+
+## Test Flow
+
+```mermaid
+flowchart LR
+    subgraph Input
+        REQ[HTTP Request]
+        CMD[Command]
+        QRY[Query]
+    end
+
+    subgraph "Infrastructure Tests"
+        MW[Middleware]
+        HH[HTTP Handler]
+    end
+
+    subgraph "Application Tests"
+        CH[Command Handler]
+        QH[Query Handler]
+        DTO[DTO Conversion]
+    end
+
+    subgraph "Domain Tests"
+        ENT[Entity]
+        VAL[Validation]
+    end
+
+    REQ --> MW
+    MW --> HH
+    HH --> CH
+    HH --> QH
+    CMD --> CH
+    QRY --> QH
+    CH --> ENT
+    QH --> DTO
+    ENT --> VAL
+
+    style Input fill:#ffeb3b
+    style MW fill:#f3e5f5
+    style HH fill:#f3e5f5
+    style CH fill:#fff3e0
+    style QH fill:#fff3e0
+    style DTO fill:#fff3e0
+    style ENT fill:#e1f5fe
+    style VAL fill:#e1f5fe
+```
+
 ## Test Organization
 
-Tests are organized by DDD architectural layers:
+Tests are organized by DDD architectural layers with granular subdirectories:
 
 ```
 tests/unit/
-├── domain/                   # Domain Layer Tests
-│   └── entity_test.go        # Domain entities (Base, Order, Orderitem)
+├── domain/                       # Domain Layer Tests
+│   └── entity/                   # Entity subdomain
+│       └── entity_test.go        # Domain entities (Base, Order, Orderitem)
 │
-├── application/              # Application Layer Tests
-│   ├── command_test.go       # CQRS commands (Create, Update, Delete)
-│   ├── queries_test.go       # CQRS queries (GetByID, GetAll, List, Search)
-│   ├── handler_test.go       # Command & Query handlers
-│   └── dto_test.go           # Data Transfer Object conversions
+├── application/                  # Application Layer Tests
+│   ├── command/                  # Command subdomain
+│   │   └── command_test.go       # CQRS commands (Create, Update, Delete)
+│   ├── query/                    # Query subdomain
+│   │   ├── queries_test.go       # CQRS queries (GetByID, GetAll, List, Search)
+│   │   └── query_test.go         # Additional query tests
+│   ├── handler/                  # Handler subdomain
+│   │   └── handler_test.go       # Command & Query handlers
+│   └── dto/                      # DTO subdomain
+│       └── dto_test.go           # Data Transfer Object conversions
 │
-├── infrastructure/           # Infrastructure Layer Tests
-│   ├── middleware_test.go    # HTTP middleware (Auth, RateLimit)
-│   ├── config_test.go        # Configuration loading
-│   └── http_handler_test.go  # HTTP endpoint handlers
+├── infrastructure/               # Infrastructure Layer Tests
+│   ├── config/                   # Configuration subdomain
+│   │   └── config_test.go        # Configuration loading
+│   ├── middleware/               # Middleware subdomain
+│   │   └── middleware_test.go    # HTTP middleware (Auth, RateLimit)
+│   └── http/                     # HTTP subdomain
+│       └── http_handler_test.go  # HTTP endpoint handlers
 │
-├── pkg/                      # Shared Package Tests
-│   ├── validator_test.go     # Request validation
-│   └── response_test.go      # HTTP response helpers
+├── pkg/                          # Shared Package Tests
+│   ├── validator/                # Validator subdomain
+│   │   └── validator_test.go     # Request validation
+│   └── response/                 # Response subdomain
+│       └── response_test.go      # HTTP response helpers
 │
-└── telemetry/                # Observability Tests
-    └── telemetry_test.go     # TelemetryFlow SDK integration
+└── telemetry/                    # Observability Tests
+    └── sdk/                      # SDK subdomain
+        └── telemetry_test.go     # TelemetryFlow SDK integration
+```
+
+All tests use external test packages (`package <name>_test`) to ensure proper encapsulation and test the public API surface.
+
+## CQRS Pattern Testing
+
+```mermaid
+flowchart TB
+    subgraph "Command Side (Write)"
+        CC[CreateOrderCommand]
+        UC[UpdateOrderCommand]
+        DC[DeleteOrderCommand]
+        CCH[CommandHandler]
+        REPO[(Repository)]
+    end
+
+    subgraph "Query Side (Read)"
+        GQ[GetByIDQuery]
+        LQ[ListOrdersQuery]
+        SQ[SearchOrdersQuery]
+        QCH[QueryHandler]
+        DTO[DTO Response]
+    end
+
+    CC --> CCH
+    UC --> CCH
+    DC --> CCH
+    CCH --> REPO
+
+    GQ --> QCH
+    LQ --> QCH
+    SQ --> QCH
+    QCH --> REPO
+    QCH --> DTO
+
+    style CC fill:#ffcdd2
+    style UC fill:#ffcdd2
+    style DC fill:#ffcdd2
+    style GQ fill:#c8e6c9
+    style LQ fill:#c8e6c9
+    style SQ fill:#c8e6c9
 ```
 
 ## Running Tests
@@ -55,6 +230,34 @@ go test ./tests/unit/pkg/... -v
 
 # Telemetry tests
 go test ./tests/unit/telemetry/... -v
+```
+
+### Run Tests by Subdomain
+
+```bash
+# Domain entity tests
+go test ./tests/unit/domain/entity/... -v
+
+# Application command tests
+go test ./tests/unit/application/command/... -v
+
+# Application query tests
+go test ./tests/unit/application/query/... -v
+
+# Application handler tests
+go test ./tests/unit/application/handler/... -v
+
+# Application DTO tests
+go test ./tests/unit/application/dto/... -v
+
+# Infrastructure config tests
+go test ./tests/unit/infrastructure/config/... -v
+
+# Infrastructure middleware tests
+go test ./tests/unit/infrastructure/middleware/... -v
+
+# Infrastructure HTTP tests
+go test ./tests/unit/infrastructure/http/... -v
 ```
 
 ### Run with Coverage
@@ -88,6 +291,35 @@ go test ./tests/unit/domain/... -run TestNewOrder -v
 
 # Run tests matching a pattern
 go test ./tests/unit/... -run ".*Validate.*" -v
+```
+
+## Mock Architecture
+
+```mermaid
+classDiagram
+    class MockOrderRepository {
+        +Create(ctx, entity) error
+        +FindByID(ctx, id) *Order, error
+        +FindAll(ctx, offset, limit) []Order, int64, error
+        +Update(ctx, entity) error
+        +Delete(ctx, id) error
+    }
+
+    class MockOrderCommandHandler {
+        +HandleOrderCreate(ctx, cmd) error
+        +HandleOrderUpdate(ctx, cmd) error
+        +HandleOrderDelete(ctx, cmd) error
+    }
+
+    class MockOrderQueryHandler {
+        +HandleOrderGetByID(ctx, qry) *OrderResponse, error
+        +HandleOrderGetAll(ctx, qry) *OrderListResponse, error
+    }
+
+    OrderCommandHandler ..> MockOrderRepository : uses
+    OrderQueryHandler ..> MockOrderRepository : uses
+    HTTPHandler ..> MockOrderCommandHandler : uses
+    HTTPHandler ..> MockOrderQueryHandler : uses
 ```
 
 ## Test Patterns
@@ -153,6 +385,15 @@ func TestHandler(t *testing.T) {
 
 ## Test Coverage by Component
 
+```mermaid
+pie title Test Coverage Distribution
+    "Domain (Entity)" : 25
+    "Application (CQRS)" : 35
+    "Infrastructure" : 25
+    "Pkg (Shared)" : 10
+    "Telemetry" : 5
+```
+
 | Layer          | Package                    | Coverage Focus                           |
 |----------------|----------------------------|------------------------------------------|
 | Domain         | `entity`                   | Entity creation, validation, soft delete |
@@ -178,6 +419,31 @@ Tests use the following packages:
 - `net/http/httptest` - HTTP test utilities
 
 ## Best Practices
+
+```mermaid
+mindmap
+  root((Test Best Practices))
+    Isolation
+      Independent tests
+      No shared state
+      Clean setup/teardown
+    Naming
+      Descriptive names
+      Scenario-based
+      Feature_Scenario_Expected
+    Mocking
+      Mock dependencies
+      Verify interactions
+      Use interfaces
+    Coverage
+      >80% business logic
+      Edge cases
+      Error paths
+    Performance
+      Benchmark critical code
+      Parallel execution
+      Fast feedback
+```
 
 1. **Isolation**: Each test should be independent and not rely on external state
 2. **Naming**: Use descriptive test names that explain the scenario

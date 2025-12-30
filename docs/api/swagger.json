@@ -3,7 +3,7 @@
   "info": {
     "title": "order-service API",
     "description": "order-api - RESTful API with DDD + CQRS Pattern",
-    "version": "1.0.0",
+    "version": "1.1.1",
     "contact": {
       "name": "API Support",
       "email": "support@example.com"

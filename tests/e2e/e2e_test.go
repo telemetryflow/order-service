@@ -175,7 +175,7 @@ func TestE2EHealthCheck(t *testing.T) {
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"status":    "healthy",
 			"service":   "order-api",
-			"version":   "1.0.0",
+			"version":   "1.1.1",
 			"timestamp": time.Now().Format(time.RFC3339),
 		})
 	})
@@ -191,7 +191,7 @@ func TestE2EHealthCheck(t *testing.T) {
 
 		assert.Equal(t, "healthy", response["status"])
 		assert.Equal(t, "order-api", response["service"])
-		assert.Equal(t, "1.0.0", response["version"])
+		assert.Equal(t, "1.1.1", response["version"])
 		assert.NotEmpty(t, response["timestamp"])
 	})
 

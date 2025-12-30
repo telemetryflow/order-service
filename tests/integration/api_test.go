@@ -167,7 +167,7 @@ func TestAPIVersionEndpoint(t *testing.T) {
 
 	e.GET("/version", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
-			"version":    "1.0.0",
+			"version":    "1.1.1",
 			"service":    "order-api",
 			"build_time": "2024-01-01T00:00:00Z",
 			"git_commit": "abc1234",
@@ -186,7 +186,7 @@ func TestAPIVersionEndpoint(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Equal(t, "1.0.0", response["version"])
+		assert.Equal(t, "1.1.1", response["version"])
 		assert.Equal(t, "order-api", response["service"])
 		assert.NotEmpty(t, response["build_time"])
 		assert.NotEmpty(t, response["git_commit"])
