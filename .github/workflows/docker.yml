@@ -1,42 +1,39 @@
 # =============================================================================
-# Order Service - Docker Build Workflow
+# Order Service - Docker Image Builder Workflow
 # =============================================================================
 #
 # Order Service - TelemetryFlow Microservices Platform
 # Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
 #
-# This workflow builds and pushes Docker images to GitHub Container Registry:
-# - Multi-platform builds (linux/amd64, linux/arm64)
-# - Automatic tagging based on branches and tags
-# - Security scanning with Trivy
-# - SBOM generation
+# This workflow builds and publishes Docker images for Order Service:
+# - Multi-platform support: linux/amd64, linux/arm64
+# - Semantic versioning tags
+# - Docker Hub
 #
 # Triggers:
-# - Push to main/develop branches
 # - Push tags matching v*.*.*
-# - Pull requests affecting Docker files
+# - Push to main/master branch (latest tag)
 # - Manual workflow dispatch
 #
 # =============================================================================
 
-name: Docker
+name: Docker Build
 
 on:
   push:
     branches:
       - main
       - master
-      - develop
     tags:
       - 'v*.*.*'
     paths:
       - 'Dockerfile'
       - 'docker-compose.yml'
-      - 'go.mod'
-      - 'go.sum'
       - 'cmd/**'
       - 'internal/**'
       - 'pkg/**'
+      - 'go.mod'
+      - 'go.sum'
       - '.github/workflows/docker.yml'
   pull_request:
     branches:
@@ -44,42 +41,148 @@ on:
       - master
     paths:
       - 'Dockerfile'
-      - 'docker-compose.yml'
-      - '.github/workflows/docker.yml'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'go.mod'
+      - 'go.sum'
   workflow_dispatch:
     inputs:
-      push_image:
-        description: 'Push image to registry'
+      version:
+        description: 'Version tag (e.g., 1.0.0)'
+        required: false
+        default: ''
+      push:
+        description: 'Push images to registry'
         required: false
         type: boolean
         default: true
       platforms:
         description: 'Target platforms'
         required: false
-        type: choice
-        options:
-          - 'linux/amd64,linux/arm64'
-          - 'linux/amd64'
-          - 'linux/arm64'
         default: 'linux/amd64,linux/arm64'
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  REGISTRY_DOCKER: docker.io
+  IMAGE_NAME: telemetryflow/order-service
   PRODUCT_NAME: Order Service
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  security-events: write
 
 jobs:
   # ===========================================================================
+  # Prepare Build Context
+  # ===========================================================================
+  prepare:
+    name: Prepare Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
+      commit: ${{ steps.info.outputs.commit }}
+      branch: ${{ steps.info.outputs.branch }}
+      build_time: ${{ steps.info.outputs.build_time }}
+      go_version: ${{ steps.info.outputs.go_version }}
+      push: ${{ steps.check.outputs.push }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (for version info)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Get build info
+        id: info
+        run: |
+          echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+          # Get Go version from Makefile
+          echo "go_version=$(go version | cut -d ' ' -f 3)" >> $GITHUB_OUTPUT
+
+      - name: Check if should push
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "push=false" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "push=${{ github.event.inputs.push }}" >> $GITHUB_OUTPUT
+          else
+            echo "push=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_DOCKER }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            # Semantic versioning from tags
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # Manual version input
+            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
+            # Branch name for non-tag pushes
+            type=ref,event=branch
+            # PR number
+            type=ref,event=pr
+            # Latest for default branch
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') || github.ref == format('refs/heads/{0}', 'master') }}
+            # Git SHA
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=${{ env.PRODUCT_NAME }}
+            org.opencontainers.image.description=Order Service microservice for TelemetryFlow platform
+            org.opencontainers.image.vendor=TelemetryFlow
+            io.telemetryflow.product=${{ env.PRODUCT_NAME }}
+            io.telemetryflow.component=order-service
+            io.telemetryflow.platform=CEOP
+
+  # ===========================================================================
   # Build and Push Docker Image
   # ===========================================================================
-  docker:
+  build:
     name: Build & Push
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
+    needs: prepare
     steps:
+      - name: Free up disk space
+        run: |
+          echo "=== Disk space before cleanup ==="
+          df -h
+
+          # Remove unnecessary tools and SDKs
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+          # Clean apt cache
+          sudo apt-get clean
+
+          # Remove Docker images we don't need
+          docker system prune -af --volumes || true
+
+          echo "=== Disk space after cleanup ==="
+          df -h
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -89,140 +192,137 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
+      - name: Login to Docker Hub
+        if: needs.prepare.outputs.push == 'true' && vars.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY_DOCKER }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            # Branch builds
-            type=ref,event=branch
-            # PR builds
-            type=ref,event=pr
-            # Semver tags
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            # SHA
-            type=sha,prefix=sha-
-            # Latest tag for main branch
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="${{ needs.prepare.outputs.commit }}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          platforms: ${{ inputs.platforms || 'linux/amd64,linux/arm64' }}
-          push: ${{ github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.push_image) }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ github.event.inputs.platforms || 'linux/amd64,linux/arm64' }}
+          push: ${{ needs.prepare.outputs.push == 'true' }}
+          tags: ${{ needs.prepare.outputs.tags }}
+          labels: ${{ needs.prepare.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            GIT_COMMIT=${{ needs.prepare.outputs.commit }}
+            GIT_BRANCH=${{ needs.prepare.outputs.branch }}
+            BUILD_TIME=${{ needs.prepare.outputs.build_time }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ github.ref_name }}
-            GIT_COMMIT=${{ github.sha }}
-            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+          provenance: true
+          sbom: true
 
       - name: Generate SBOM
-        if: github.event_name != 'pull_request'
+        if: needs.prepare.outputs.push == 'true'
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          image: ${{ env.REGISTRY_DOCKER }}/${{ env.IMAGE_NAME }}:sha-${{ needs.prepare.outputs.commit }}
           format: spdx-json
-          output-file: sbom.spdx.json
-        continue-on-error: true
+          output-file: sbom-${{ steps.version.outputs.version }}.spdx.json
+          upload-release-assets: false
 
       - name: Upload SBOM
-        if: github.event_name != 'pull_request'
+        if: needs.prepare.outputs.push == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: sbom
-          path: sbom.spdx.json
-          retention-days: 30
-        continue-on-error: true
+          name: sbom-${{ needs.prepare.outputs.commit }}
+          path: sbom-*.spdx.json
+          retention-days: 90
 
   # ===========================================================================
-  # Scan Docker Image for vulnerabilities
+  # Security Scan
   # ===========================================================================
   scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    needs: docker
-    if: github.event_name != 'pull_request'
-    permissions:
-      contents: read
-      security-events: write
-
+    needs: [prepare, build]
+    if: needs.prepare.outputs.push == 'true' && vars.DOCKERHUB_USERNAME != ''
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to Container Registry
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY_DOCKER }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          image-ref: ${{ env.REGISTRY_DOCKER }}/${{ env.IMAGE_NAME }}:sha-${{ needs.prepare.outputs.commit }}
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-        continue-on-error: true
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v4
+        if: always()
         with:
           sarif_file: 'trivy-results.sarif'
-        continue-on-error: true
 
   # ===========================================================================
-  # Docker Compose validation
-  # ===========================================================================
-  compose-validate:
-    name: Validate Compose
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Validate docker-compose.yml
-        run: docker compose config -q
-
-      - name: Check compose file syntax
-        run: docker compose --profile all config > /dev/null
-
-  # ===========================================================================
-  # Docker Build Summary
+  # CI Summary
   # ===========================================================================
   summary:
-    name: Docker Summary
+    name: Build Summary
     runs-on: ubuntu-latest
-    needs: [docker, scan, compose-validate]
+    needs: [prepare, build]
     if: always()
     steps:
-      - name: Generate summary
+      - name: Summary
         run: |
-          echo "## ${{ env.PRODUCT_NAME }} - Docker Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Build & Push | ${{ needs.docker.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Security Scan | ${{ needs.scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Compose Validate | ${{ needs.compose-validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Product** | ${{ env.PRODUCT_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Go Version** | ${{ needs.prepare.outputs.go_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | ${{ needs.prepare.outputs.commit }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ needs.prepare.outputs.branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Time** | ${{ needs.prepare.outputs.build_time }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Push** | ${{ needs.prepare.outputs.push }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Tags" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.prepare.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Usage" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Run Order Service" >> $GITHUB_STEP_SUMMARY
+          echo "docker run -d \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --name order-service \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -p 8080:8080 \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -e DATABASE_URL=postgres://... \\" >> $GITHUB_STEP_SUMMARY
+          echo "  ${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Run with TelemetryFlow integration" >> $GITHUB_STEP_SUMMARY
+          echo "docker run -d \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --name order-service \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -e TELEMETRYFLOW_ENDPOINT=api.telemetryflow.id:4317 \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -e TELEMETRYFLOW_API_KEY_ID=tfk_... \\" >> $GITHUB_STEP_SUMMARY
+          echo "  ${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
