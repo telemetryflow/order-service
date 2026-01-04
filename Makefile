@@ -41,7 +41,7 @@ YELLOW := \033[0;33m
 RED := \033[0;31m
 NC := \033[0m
 
-.PHONY: all build run test clean help deps lint fmt migrate-up migrate-down docker-build
+.PHONY: all build build-all run test clean help deps lint fmt migrate-up migrate-down docker-build
 
 all: build
 
@@ -50,6 +50,7 @@ help:
 	@echo ""
 	@echo "$(YELLOW)Build Commands:$(NC)"
 	@echo "  make build              - Build the application"
+	@echo "  make build-all          - Build for all platforms (cross-compile)"
 	@echo "  make run                - Run the application"
 	@echo "  make dev                - Run with hot reload (requires air)"
 	@echo ""
@@ -106,6 +107,19 @@ build:
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/api
 	@echo "$(GREEN)Build complete: $(BUILD_DIR)/$(BINARY_NAME)$(NC)"
+
+build-all:
+	@echo "$(GREEN)Building $(BINARY_NAME) for all platforms...$(NC)"
+	@mkdir -p $(BUILD_DIR)
+	@for platform in $(PLATFORMS); do \
+		GOOS=$${platform%/*}; \
+		GOARCH=$${platform#*/}; \
+		OUTPUT="$(BUILD_DIR)/$(BINARY_NAME)-$${GOOS}-$${GOARCH}"; \
+		if [ "$${GOOS}" = "windows" ]; then OUTPUT="$${OUTPUT}.exe"; fi; \
+		echo "$(GREEN)Building for $${GOOS}/$${GOARCH}...$(NC)"; \
+		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) -ldflags "$(LDFLAGS)" -o $${OUTPUT} ./cmd/api || exit 1; \
+	done
+	@echo "$(GREEN)All builds complete$(NC)"
 
 ## Development commands
 run: build
