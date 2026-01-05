@@ -2,8 +2,11 @@
 package http
 
 import (
+	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/telemetryflow/order-service/internal/infrastructure/http/handler"
 	"github.com/telemetryflow/order-service/internal/infrastructure/http/middleware"
@@ -19,6 +22,9 @@ func (s *Server) setupRoutes() {
 
 	// OpenTelemetry auto-instrumentation for HTTP
 	e.Use(otelecho.Middleware(s.config.Telemetry.ServiceName))
+
+	// Set span status based on HTTP response code
+	e.Use(spanStatusMiddleware())
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.CORS())
@@ -52,4 +58,29 @@ func (s *Server) setupRoutes() {
 		}
 	}
 
+}
+
+// spanStatusMiddleware sets the span status based on HTTP response status code
+func spanStatusMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// Process request first
+			err := next(c)
+
+			// Get the current span from context and set status
+			span := trace.SpanFromContext(c.Request().Context())
+			if span.IsRecording() {
+				status := c.Response().Status
+				if status >= 500 {
+					span.SetStatus(codes.Error, "Server error")
+				} else if status >= 400 {
+					span.SetStatus(codes.Error, "Client error")
+				} else {
+					span.SetStatus(codes.Ok, "Success")
+				}
+			}
+
+			return err
+		}
+	}
 }

@@ -126,7 +126,7 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: make deps
+        run: make deps-refresh
 
       - name: Run unit tests
         run: make test-unit-ci

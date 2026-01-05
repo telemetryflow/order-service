@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # Ensure all dependencies are resolved
-RUN make deps-refresh
+RUN grep -v "github.com/telemetryflow/" go.sum > go.sum.tmp && mv go.sum.tmp go.sum
 RUN go mod tidy
 
 # Build the application
