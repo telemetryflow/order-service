@@ -237,7 +237,7 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: make deps
+        run: make deps-refesh && make 
 
       - name: Setup environment
         run: |

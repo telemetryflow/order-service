@@ -5,7 +5,7 @@
 
 # Build configuration
 BINARY_NAME := Order-Service
-VERSION ?= 1.1.0
+VERSION ?= 1.1.2
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 PRODUCT_NAME := Order-Service
