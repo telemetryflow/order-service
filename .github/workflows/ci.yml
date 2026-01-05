@@ -88,7 +88,7 @@ jobs:
           cache: true
 
       - name: Download and verify dependencies
-        run: make deps-refresh && make deps-verify
+        run: make deps-refresh && make deps
 
       - name: Check formatting
         run: make fmt-check
@@ -126,7 +126,7 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: make deps-refresh
+        run: make deps-refresh && make deps
 
       - name: Run unit tests
         run: make test-unit-ci
@@ -172,7 +172,7 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: make deps
+        run: make deps-refresh && make deps
 
       - name: Setup environment
         run: |
@@ -237,7 +237,7 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: make deps-refesh && make 
+        run: make deps-refresh && make deps
 
       - name: Setup environment
         run: |
@@ -298,7 +298,7 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: make deps
+        run: make deps-refresh && make deps
 
       - name: Get version
         id: version
@@ -368,7 +368,7 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: make deps
+        run: make deps-refresh && make deps
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
