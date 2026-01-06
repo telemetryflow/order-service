@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Pre-push hook for TelemetryFlow Go projects
+# Runs tests before pushing to remote
+
+set -e
+
+echo "Running pre-push checks..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+REMOTE="$1"
+URL="$2"
+
+# Read stdin for push info
+while read local_ref local_sha remote_ref remote_sha; do
+    # Skip delete operations
+    if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
+    echo -e "${YELLOW}Pushing to: ${REMOTE} (${URL})${NC}"
+    echo -e "${YELLOW}Branch: ${local_ref}${NC}"
+done
+
+FAILED=0
+
+# 1. Run tests
+echo -e "\n${YELLOW}[1/2] Running tests...${NC}"
+if go test ./... -v -race -timeout 5m 2>&1; then
+    echo -e "${GREEN}All tests passed${NC}"
+else
+    echo -e "${RED}Tests failed${NC}"
+    FAILED=1
+fi
+
+# 2. Run build to ensure project compiles
+echo -e "\n${YELLOW}[2/2] Running build check...${NC}"
+if go build ./... 2>&1; then
+    echo -e "${GREEN}Build successful${NC}"
+else
+    echo -e "${RED}Build failed${NC}"
+    FAILED=1
+fi
+
+if [ $FAILED -ne 0 ]; then
+    echo -e "\n${RED}Pre-push checks failed. Push aborted.${NC}"
+    echo -e "${YELLOW}Fix the issues above and try again.${NC}"
+    exit 1
+fi
+
+echo -e "\n${GREEN}All pre-push checks passed! Pushing...${NC}"
+exit 0
