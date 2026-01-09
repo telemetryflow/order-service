@@ -182,6 +182,17 @@ deps-update:
 	@$(GOMOD) tidy
 	@echo "$(GREEN)Dependencies updated$(NC)"
 
+deps-refresh:
+	@echo "$(GREEN)Refreshing dependencies...$(NC)"
+	@rm -rf vendor go.sum
+	@echo "$(YELLOW)Clearing module cache...$(NC)"
+	@go clean -modcache
+	@echo "$(GREEN)Re-downloading dependencies with fresh checksums...$(NC)"
+	@$(GOMOD) download
+	@$(GOMOD) tidy
+	@$(GOMOD) verify
+	@echo "$(GREEN)Dependencies refreshed$(NC)"
+
 tidy:
 	@echo "$(GREEN)Tidying go modules...$(NC)"
 	@$(GOMOD) tidy
